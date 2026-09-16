@@ -1,0 +1,12 @@
+schema: "classroom50/repo-config/v1"
+classroom: "cmpsc-473-fall-2026"
+assignment: "project-2"
+owner:
+  username: "RJC862"
+  id: 135786588
+  accepted_at: "2026-09-16T00:22:19Z"
+source:
+  owner: "cmpsc473-fall2026"
+  owner_id: 321795249
+  repo: "project2-template"
+  branch: "main"

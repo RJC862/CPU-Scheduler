@@ -18,43 +18,38 @@ void list_destroy(list_t* list)
 // Returns head of the list
 list_node_t* list_head(list_t* list)
 {
-    /* IMPLEMENT THIS */
-    return NULL;
+    return list->head;
 }
 
 // Returns tail of the list
 list_node_t* list_tail(list_t* list)
 {
-    /* IMPLEMENT THIS */
-    return NULL;
+    return list->tail;
 }
 
 // Returns next element in the list
 list_node_t* list_next(list_node_t* node)
 {
     /* IMPLEMENT THIS */
-    return NULL;
+    return node->next;
 }
 
 // Returns prev element in the list
 list_node_t* list_prev(list_node_t* node)
 {
-    /* IMPLEMENT THIS */
-    return NULL;
+    return node->prev;
 }
 
 // Returns end of the list marker
 list_node_t* list_end(list_t* list)
 {
-    /* IMPLEMENT THIS */
     return NULL;
 }
 
 // Returns data in the given list node
 void* list_data(list_node_t* node)
 {
-    /* IMPLEMENT THIS */
-    return NULL;
+    return node->data;
 }
 
 // Returns the number of elements in the list
@@ -76,7 +71,14 @@ list_node_t* list_find(list_t* list, void* data)
 // Returns new node inserted
 list_node_t* list_insert(list_t* list, void* data)
 {
-    /* IMPLEMENT THIS */
+    list_node_t* new_node = {};
+    new_node->data = data;
+
+    if (list->compare == NULL){
+        new_node->prev = NULL
+        new_node->next = list->head;
+        list->head = new_node;
+    }
     return NULL;
 }
 

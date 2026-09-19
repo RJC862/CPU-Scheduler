@@ -21,30 +21,53 @@ list_t* list_create(compare_fn compare)
 // Destroys a list
 void list_destroy(list_t* list)
 {
-    /* IMPLEMENT THIS */
+    if (list == NULL) {
+        return;
+    }
+
+    list_node_t* curr = list->head;
+    while (curr != NULL) {
+        list_node_t* next = curr->next;
+        free(curr);
+        curr = next;
+    }
+
+    free(list);
 }
 
 // Returns head of the list
 list_node_t* list_head(list_t* list)
 {
+    if (list == NULL) {
+        return NULL;
+    }
     return list->head;
 }
 
 // Returns tail of the list
 list_node_t* list_tail(list_t* list)
 {
+    if (list == NULL) {
+        return NULL;
+    }
     return list->tail;
 }
 
 // Returns next element in the list
 list_node_t* list_next(list_node_t* node)
 {
+    if (node == NULL) {
+        return NULL;
+    }
     return node->next;
 }
 
 // Returns prev element in the list
 list_node_t* list_prev(list_node_t* node)
 {
+    if (node == NULL) {
+        return NULL;
+    }
     return node->prev;
 }
 

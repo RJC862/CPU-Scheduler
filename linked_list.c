@@ -5,8 +5,17 @@
 // If compare is NULL, list_insert just inserts at the head
 list_t* list_create(compare_fn compare)
 {
-    /* IMPLEMENT THIS */
-    return NULL;
+    list_t* new_list = (list_t*)malloc(sizeof(list_t));
+    if (new_list == NULL) {
+        return NULL;
+    }
+
+    new_list->head = NULL;
+    new_list->tail = NULL;
+    new_list->count = 0;
+    new_list->compare = compare;
+
+    return new_list;
 }
 
 // Destroys a list
@@ -42,18 +51,28 @@ list_node_t* list_prev(list_node_t* node)
 // Returns end of the list marker
 list_node_t* list_end(list_t* list)
 {
-    return NULL;
+    if (list == NULL || list->tail == NULL) {
+        return NULL;
+    }
+
+    return list->tail->next;
 }
 
 // Returns data in the given list node
 void* list_data(list_node_t* node)
 {
+    if (node == NULL) {
+        return NULL;
+    }
     return node->data;
 }
 
 // Returns the number of elements in the list
 size_t list_count(list_t* list)
 {
+    if (list == NULL) {
+        return 0;
+    }
     return list->count;
 }
 
@@ -81,8 +100,9 @@ list_node_t* list_find(list_t* list, void* data)
 // Inserts a new node in the list with the given data
 // Returns new node inserted
 list_node_t* list_insert(list_t* list, void* data){
-    list_node_t* new_node = (list_node_t*)malloc(sizeof(list_node_t));
-    return NULL;
+    if (list == NULL || data == NULL) {
+        return NULL;
+    }
 
 }
 

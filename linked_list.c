@@ -30,7 +30,6 @@ list_node_t* list_tail(list_t* list)
 // Returns next element in the list
 list_node_t* list_next(list_node_t* node)
 {
-    /* IMPLEMENT THIS */
     return node->next;
 }
 
@@ -55,8 +54,7 @@ void* list_data(list_node_t* node)
 // Returns the number of elements in the list
 size_t list_count(list_t* list)
 {
-    /* IMPLEMENT THIS */
-    return 0;
+    return list->count;
 }
 
 // Finds the first node in the list with the given data

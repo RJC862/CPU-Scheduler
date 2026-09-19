@@ -127,6 +127,59 @@ list_node_t* list_insert(list_t* list, void* data){
         return NULL;
     }
 
+    list_node_t* new_node = (list_node_t*)malloc(sizeof(list_node_t));
+    if (new_node == NULL) {
+        return NULL;
+    }
+
+    new_node->data = data;
+    new_node->next = NULL;
+    new_node->prev = NULL;
+
+    if (list->head == NULL) {
+        list->head = new_node;
+        list->tail = new_node;
+        list->count = 1;
+    }
+
+    list_node_t* curr = list->head;
+    while (curr != NULL) {
+
+        // compare the new node and the current node
+        int comp_res = list->compare(new_node->data, curr->data);
+
+        // insert at head if compare returns NULL
+        if (comp_res == NULL) {
+            list->head = new_node;
+            list->tail = new_node;
+            list->count++;
+
+            return new_node;
+        } else if (comp_res <= 0) { // insert before current node
+            new_node->next = curr;
+            
+            if (curr->prev != NULL) {
+                new_node->prev = curr->prev;
+                curr->prev->next = new_node;
+            }
+            curr->prev = new_node;
+
+            list->count++;
+            return new_node;
+        }
+
+        curr = curr->next;
+    }
+
+    if (curr == NULL) { // insert at tail
+        new_node->prev = list->tail;
+        list->tail->next = new_node;
+        list->tail = new_node;
+        new_node->prev = list->tail;
+        new_node->next = NULL;
+        list->count++;
+    }
+    return new_node;
 }
 
 // Removes a node from the list and frees the node resources

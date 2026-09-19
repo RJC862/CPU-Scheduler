@@ -61,27 +61,47 @@ size_t list_count(list_t* list)
 // Returns NULL if data could not be found
 list_node_t* list_find(list_t* list, void* data)
 {
-    /* IMPLEMENT THIS */
+    if (data == NULL || list == NULL) {
+        return NULL;
+    }
+
+    list_node_t* curr = list->head;
+
+    while (curr != NULL) {
+        if (curr->data == data) {
+            return curr;
+        }
+
+        curr = curr->next;
+    }
+
     return NULL;
 }
 
 // Inserts a new node in the list with the given data
 // Returns new node inserted
-list_node_t* list_insert(list_t* list, void* data)
-{
-    list_node_t* new_node = {};
-    new_node->data = data;
-
-    if (list->compare == NULL){
-        new_node->prev = NULL
-        new_node->next = list->head;
-        list->head = new_node;
-    }
+list_node_t* list_insert(list_t* list, void* data){
+    list_node_t* new_node = (list_node_t*)malloc(sizeof(list_node_t));
     return NULL;
+
 }
 
 // Removes a node from the list and frees the node resources
 void list_remove(list_t* list, list_node_t* node)
 {
-    /* IMPLEMENT THIS */
+    if (list == NULL || node == NULL) {
+        return;
+    }
+
+    if (node->prev != NULL ) {
+        node->prev->next = node->next;
+        node->prev = NULL;
+    }
+
+    if (node->next != NULL) {
+        node->next->prev = node->prev;
+        node->next = NULL;
+    }
+
+    free(node);
 }

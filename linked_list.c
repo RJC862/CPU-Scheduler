@@ -142,20 +142,24 @@ list_node_t* list_insert(list_t* list, void* data){
         list->count = 1;
     }
 
+    // if the compare function is NULL, insert at the head
+    if (list->compare == NULL){
+        new_node->next = list->head;
+        list->head->prev = new_node;
+        list->head = new_node;
+        list->count++;
+        return new_node;
+    }
+
     list_node_t* curr = list->head;
+    
+    // Inserts at the first position where the new node is less than or equal to the current node
     while (curr != NULL) {
 
         // compare the new node and the current node
         int comp_res = list->compare(new_node->data, curr->data);
 
-        // insert at head if compare returns NULL
-        if (comp_res == NULL) {
-            list->head = new_node;
-            list->tail = new_node;
-            list->count++;
-
-            return new_node;
-        } else if (comp_res <= 0) { // insert before current node
+        if (comp_res <= 0) { // insert before current node
             new_node->next = curr;
             
             if (curr->prev != NULL) {

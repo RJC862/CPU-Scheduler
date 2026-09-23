@@ -52,7 +52,19 @@ void schedulerFCFSDestroy(void *schedulerInfo)
 void schedulerFCFSScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t *job, uint64_t currentTime)
 {
     scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+    if (info->running_job == NULL)
+    {
+        info->running_job = job;
+        bool scheduleSuccess = schedulerScheduleNextCompletion(scheduler, currentTime + job->jobTime);
+        if (!scheduleSuccess)
+        {
+            perror("Failure while scheduling job %d.", job->id);
+        }
+    }
+    else
+    {
+        list_insert(info->queue, job);
+    }
 }
 
 // Called to complete a job in response to an earlier call to schedulerScheduleNextCompletion

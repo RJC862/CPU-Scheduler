@@ -75,6 +75,39 @@ void schedulerFCFSScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 job_t *schedulerFCFSCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
     scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+
+    job_t *job = malloc(sizeof(job_t));
+
+    if (job == NULL)
+    {
+        free(job);
+        return NULL;
+    }
+
+    job = list_tail(info->queue);
+
+    list_remove(info->queue, job);
+
+    job_t *next_job = malloc(sizeof(job_t));
+
+    if (next_job == NULL)
+    {
+        free(next_job);
+        return job;
+    }
+
+    next_job = list_tail(info->queue);
+    if (next_job != NULL)
+    {
+        bool scheduleSuccess = schedulerScheduleNextCompletion(scheduler, currentTime + next_job->jobTime);
+
+        if (!scheduleSuccess)
+        {
+            perror("Failure while scheduling job %d.", next_job->id);
+            free(next_job);
+            exit;
+        }
+    }
+
     return NULL;
 }

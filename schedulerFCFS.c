@@ -5,26 +5,42 @@
 #include "linked_list.h"
 
 // FCFS scheduler info
-typedef struct {
-    /* IMPLEMENT THIS */
+typedef struct
+{
+
+    list_t *queue;
+    job_t *running_job;
+    scheduler_info_create_fn create;
+    scheduler_info_destroy_fn destroy;
+    schedule_job_fn scheduleJob;
+    complete_job_fn completeJob;
+
 } scheduler_FCFS_t;
 
 // Creates and returns scheduler specific info
-void* schedulerFCFSCreate()
+void *schedulerFCFSCreate()
 {
-    scheduler_FCFS_t* info = malloc(sizeof(scheduler_FCFS_t));
-    if (info == NULL) {
+    scheduler_FCFS_t *info = malloc(sizeof(scheduler_FCFS_t));
+    if (info == NULL)
+    {
         return NULL;
     }
-    /* IMPLEMENT THIS */
+
+    info->queue = list_create(NULL);
+    info->create = schedulerFCFSCreate;
+    info->destroy = schedulerFCFSDestroy;
+    info->completeJob = schedulerFCFSCompleteJob;
+    info->scheduleJob = schedulerFCFSScheduleJob;
+
     return info;
 }
 
 // Destroys scheduler specific info
-void schedulerFCFSDestroy(void* schedulerInfo)
+void schedulerFCFSDestroy(void *schedulerInfo)
 {
-    scheduler_FCFS_t* info = (scheduler_FCFS_t*)schedulerInfo;
-    /* IMPLEMENT THIS */
+    scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
+    free(info->queue);
+    free(info->running_job);
     free(info);
 }
 
@@ -33,9 +49,9 @@ void schedulerFCFSDestroy(void* schedulerInfo)
 // scheduler - used to call schedulerScheduleNextCompletion and schedulerCancelNextCompletion
 // job - new job being added to the queue
 // currentTime - the current simulated time
-void schedulerFCFSScheduleJob(void* schedulerInfo, scheduler_t* scheduler, job_t* job, uint64_t currentTime)
+void schedulerFCFSScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t *job, uint64_t currentTime)
 {
-    scheduler_FCFS_t* info = (scheduler_FCFS_t*)schedulerInfo;
+    scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
     /* IMPLEMENT THIS */
 }
 
@@ -44,9 +60,9 @@ void schedulerFCFSScheduleJob(void* schedulerInfo, scheduler_t* scheduler, job_t
 // scheduler - used to call schedulerScheduleNextCompletion and schedulerCancelNextCompletion
 // currentTime - the current simulated time
 // Returns the job that is being completed
-job_t* schedulerFCFSCompleteJob(void* schedulerInfo, scheduler_t* scheduler, uint64_t currentTime)
+job_t *schedulerFCFSCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
-    scheduler_FCFS_t* info = (scheduler_FCFS_t*)schedulerInfo;
+    scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
     /* IMPLEMENT THIS */
     return NULL;
 }

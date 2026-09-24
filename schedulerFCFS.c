@@ -39,8 +39,19 @@ void *schedulerFCFSCreate()
 // Destroys scheduler specific info
 void schedulerFCFSDestroy(void *schedulerInfo)
 {
-
+    if (schedulerInfo == NULL)
+    {
+        return;
+    }
     scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
+
+    if (info->queue != NULL)
+    {
+        list_destroy(info->queue);
+        info->queue = NULL;
+    }
+
+    free(info);
 }
 
 // Called to schedule a new job in the queue
@@ -75,13 +86,21 @@ job_t *schedulerFCFSCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
 
     list_node_t *job_node = list_tail(info->queue);
 
-    // Tail of the queue is the next running job
-    job_t *next_job = (job_t *)job_node->data;
-    if (next_job != NULL)
+    if (job_node != NULL)
+    { // Tail of the queue is the next running job
+        job_t *next_job = (job_t *)job_node->data;
+        info->running_job = next_job;
+        if (next_job != NULL)
+        {
+            schedulerScheduleNextCompletion(scheduler, currentTime + jobGetJobTime(next_job));
+        }
+
+        list_remove(info->queue, job_node);
+    }
+    else
     {
-        schedulerScheduleNextCompletion(scheduler, currentTime + jobGetJobTime(next_job));
+        info->running_job = NULL;
     }
 
-    list_remove(info->queue, job_node);
     return currJob;
 }

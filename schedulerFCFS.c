@@ -74,7 +74,7 @@ job_t *schedulerFCFSCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
 
     job_t *currJob = info->running_job;
 
-        list_node_t *job_node = list_tail(info->queue);
+    list_node_t *job_node = list_tail(info->queue);
 
     // Tail of the queue is the next running job
     job_t *next_job = (job_t *)job_node->data;

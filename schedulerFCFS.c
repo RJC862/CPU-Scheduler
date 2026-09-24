@@ -55,11 +55,7 @@ void schedulerFCFSScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     if (info->running_job == NULL)
     {
         info->running_job = job;
-        bool scheduleSuccess = schedulerScheduleNextCompletion(scheduler, currentTime + job->jobTime);
-        if (!scheduleSuccess)
-        {
-            perror("Failure while scheduling job %d.", job->id);
-        }
+        schedulerScheduleNextCompletion(scheduler, currentTime + job->jobTime);
     }
     else
     {
@@ -76,38 +72,17 @@ job_t *schedulerFCFSCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
 {
     scheduler_FCFS_t *info = (scheduler_FCFS_t *)schedulerInfo;
 
-    job_t *job = malloc(sizeof(job_t));
+    job_t *currJob = info->running_job;
 
-    if (job == NULL)
-    {
-        free(job);
-        return NULL;
-    }
+        list_node_t *job_node = list_tail(info->queue);
 
-    job = list_tail(info->queue);
-
-    list_remove(info->queue, job);
-
-    job_t *next_job = malloc(sizeof(job_t));
-
-    if (next_job == NULL)
-    {
-        free(next_job);
-        return job;
-    }
-
-    next_job = list_tail(info->queue);
+    // Tail of the queue is the next running job
+    job_t *next_job = (job_t *)job_node->data;
     if (next_job != NULL)
     {
-        bool scheduleSuccess = schedulerScheduleNextCompletion(scheduler, currentTime + next_job->jobTime);
-
-        if (!scheduleSuccess)
-        {
-            perror("Failure while scheduling job %d.", next_job->id);
-            free(next_job);
-            exit;
-        }
+        schedulerScheduleNextCompletion(scheduler, currentTime + next_job->jobTime);
     }
 
-    return NULL;
+    list_remove(info->queue, job_node);
+    return currJob;
 }

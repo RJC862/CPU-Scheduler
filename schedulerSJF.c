@@ -16,6 +16,8 @@ typedef struct
 
 } scheduler_SJF_t;
 
+int(sjf_compare_fn)(void *data1, void *data2);
+
 // Creates and returns scheduler specific info
 void *schedulerSJFCreate()
 {
@@ -28,7 +30,7 @@ void *schedulerSJFCreate()
     info->running_job = NULL;
     info->create = schedulerSJFCreate;
     info->destroy = schedulerSJFDestroy;
-    info->scheduleJob = schedulerSJFDestroy;
+    info->scheduleJob = schedulerSJFScheduleJob;
     info->completeJob = schedulerSJFCompleteJob;
     return info;
 }
@@ -113,6 +115,8 @@ void schedulerSJFScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t 
 job_t *schedulerSJFCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
     scheduler_SJF_t *info = (scheduler_SJF_t *)schedulerInfo;
+
+    job_t *curr_job = info->running_job;
     list_node_t *next_job_node = list_head(info->queue);
 
     if (next_job_node != NULL)
@@ -130,5 +134,5 @@ job_t *schedulerSJFCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint
     {
         info->running_job = NULL;
     }
-    return NULL;
+    return curr_job;
 }

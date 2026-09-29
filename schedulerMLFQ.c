@@ -46,7 +46,21 @@ void *schedulerMLFQCreate()
 void schedulerMLFQDestroy(void *schedulerInfo)
 {
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+    if (info->q0 != NULL)
+    {
+        list_destroy(info->q0);
+        info->q0 = NULL;
+    }
+    if (info->q1 != NULL)
+    {
+        list_destroy(info->q0);
+        info->q1 = NULL;
+    }
+    if (info->q2 != NULL)
+    {
+        list_destroy(info->q0);
+        info->q2 = NULL;
+    }
     free(info);
 }
 
@@ -57,8 +71,21 @@ void schedulerMLFQDestroy(void *schedulerInfo)
 // currentTime - the current simulated time
 void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t *job, uint64_t currentTime)
 {
+    if (schedulerInfo == NULL)
+    {
+        return;
+    }
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+
+    if (info->job0 == NULL)
+    {
+        info->job0 = job;
+        schedulerScheduleNextCompletion(scheduler, currentTime + 1); // timeslice of 1
+    }
+    else
+    {
+        list_insert(info->q0, job);
+    }
 }
 
 // Called to complete a job in response to an earlier call to schedulerScheduleNextCompletion
@@ -69,6 +96,9 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+    job_t *job0 = info->job0;
+    job_t *job1 = info->job1;
+    job_t *job2 = info->job2;
+
     return NULL;
 }

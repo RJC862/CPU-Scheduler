@@ -80,6 +80,7 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     if (info->job0 == NULL)
     {
         info->job0 = job;
+        schedulerCancelNextCompletion(scheduler);
         schedulerScheduleNextCompletion(scheduler, currentTime + 1); // timeslice of 1
     }
     else
@@ -100,5 +101,59 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
     job_t *job1 = info->job1;
     job_t *job2 = info->job2;
 
+    // queues will always have an assigned job to run if not empty
+    if (job0 != NULL)
+    {
+
+        // if job0 in q0 is not finished, demote it
+        if (jobGetRemainingTime(job0) > 0)
+        {
+            list_insert(info->q1, job0);
+
+            job_t *next_job = (job_t *)list_tail(info->q0)->data;
+            info->job0 = next_job;
+
+            if (next_job != NULL)
+            {
+                schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            }
+
+            list_remove(info->q0, list_tail(info->q0));
+        }
+        else
+        {
+            return job0;
+        }
+    }
+    else if (job1 != NULL) // demote running job in q1 to q2
+    {
+        if (jobGetRemainingTime(job1) > 0)
+        {
+            list_insert(info->q2, job0);
+
+            job_t *next_job = (job_t *)list_tail(info->q1)->data;
+            info->job0 = next_job;
+
+            if (next_job != NULL)
+            {
+                schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            }
+
+            list_remove(info->q1, list_tail(info->q1));
+        }
+    }
+    else if (job2 != NULL)
+    {
+
+        if (jobGetRemainingTime(job2) > 0)
+        {
+            job_t *next_job = (job_t *)list_tail(info->q2)->data;
+            info->job2 = next_job;
+            if (next_job != NULL)
+            {
+                schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            }
+        }
+    }
     return NULL;
 }

@@ -33,36 +33,50 @@ void *schedulerSJFCreate()
     return info;
 }
 
-typedef struct
-{
-    uint64_t *value;
-} data_item_t;
-
 // -1 if data1 goes before data2
 // 0 if data1 is equivalent to data2
 // 1 if data1 goes after data2
 int sjf_compare_fn(void *data1, void *data2)
 {
-    data_item_t *dataItem1 = (data_item_t *)data1;
-    data_item_t *dataItem2 = (data_item_t *)data2;
+    job_t *dataItem1 = (job_t *)data1;
+    job_t *dataItem2 = (job_t *)data2;
 
-    if (dataItem1->value < dataItem2->value)
+    if (jobGetJobTime(dataItem1) == jobGetJobTime(dataItem2))
     {
-        return -1;
+
+        // equivalently sized jobs are ordered by ID
+        if (jobGetId(dataItem1) < jobGetId(dataItem2))
+        {
+            return -1;
+        }
+        else
+        {
+            return 1;
+        }
     }
-    else if (dataItem1->value > dataItem2->value)
+    else if (jobGetJobTime(dataItem1) > jobGetJobTime(dataItem2))
     {
         return 1;
     }
 
-    return 0;
+    return -1;
 }
 
 // Destroys scheduler specific info
 void schedulerSJFDestroy(void *schedulerInfo)
 {
+    if (schedulerInfo == NULL)
+    {
+        return;
+    }
     scheduler_SJF_t *info = (scheduler_SJF_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+
+    if (info->queue != NULL)
+    {
+        list_destroy(info->queue);
+        info->queue = NULL;
+    }
+
     free(info);
 }
 
@@ -73,8 +87,22 @@ void schedulerSJFDestroy(void *schedulerInfo)
 // currentTime - the current simulated time
 void schedulerSJFScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t *job, uint64_t currentTime)
 {
+    if (schedulerInfo == NULL)
+    {
+        return;
+    }
+
     scheduler_SJF_t *info = (scheduler_SJF_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+
+    if (info->running_job == NULL)
+    {
+        info->running_job = job;
+        schedulerScheduleNextCompletion(scheduler, currentTime + jobGetJobTime(job));
+    }
+    else
+    {
+        list_insert(info->queue, job);
+    }
 }
 
 // Called to complete a job in response to an earlier call to schedulerScheduleNextCompletion
@@ -85,6 +113,14 @@ void schedulerSJFScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t 
 job_t *schedulerSJFCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
     scheduler_SJF_t *info = (scheduler_SJF_t *)schedulerInfo;
-    /* IMPLEMENT THIS */
+    list_node_t *nextJobNode = list_head(info->queue);
+
+    job_t *nextJob = (job_t *)nextJobNode->data;
+
+    if (nextJob != NULL)
+    {
+        info->running_job = nextJob;
+        schedulerScheduleNextCompletion(scheduler, currentTime + jobGetJobTime(nextJob));
+    }
     return NULL;
 }

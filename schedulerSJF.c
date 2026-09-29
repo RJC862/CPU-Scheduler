@@ -113,14 +113,22 @@ void schedulerSJFScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t 
 job_t *schedulerSJFCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
     scheduler_SJF_t *info = (scheduler_SJF_t *)schedulerInfo;
-    list_node_t *nextJobNode = list_head(info->queue);
+    list_node_t *next_job_node = list_head(info->queue);
 
-    job_t *nextJob = (job_t *)nextJobNode->data;
-
-    if (nextJob != NULL)
+    if (next_job_node != NULL)
     {
-        info->running_job = nextJob;
-        schedulerScheduleNextCompletion(scheduler, currentTime + jobGetJobTime(nextJob));
+        job_t *next_job = (job_t *)next_job_node->data;
+        info->running_job = next_job;
+
+        if (next_job != NULL)
+        {
+            schedulerScheduleNextCompletion(scheduler, currentTime + jobGetJobTime(next_job));
+        }
+        list_remove(info->queue, next_job_node);
+    }
+    else
+    {
+        info->running_job = NULL;
     }
     return NULL;
 }

@@ -80,7 +80,7 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     if (info->job0 == NULL)
     {
         info->job0 = job;
-        schedulerCancelNextCompletion(scheduler);
+        schedulerCancelNextCompletion(scheduler); // preempt
         schedulerScheduleNextCompletion(scheduler, currentTime + 1); // timeslice of 1
     }
     else
@@ -108,38 +108,49 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
         // if job0 in q0 is not finished, demote it
         if (jobGetRemainingTime(job0) > 0)
         {
+            jobSetRemainingTime(job0, jobGetRemainingTime(job0) -1);
             list_insert(info->q1, job0);
-
-            job_t *next_job = (job_t *)list_tail(info->q0)->data;
-            info->job0 = next_job;
-
-            if (next_job != NULL)
-            {
-                schedulerScheduleNextCompletion(scheduler, currentTime + 1);
-            }
-
-            list_remove(info->q0, list_tail(info->q0));
         }
-        else
+
+        // get and run next job from q0
+        job_t *next_job = (job_t *)list_tail(info->q0)->data;
+        info->job0 = next_job;
+
+        if (next_job != NULL)
         {
-            return job0;
-        }
+            schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+
+            // remove the job from q0
+            list_remove(info->q0, list_tail(info->q0));
+        } else {
+
+            // if there is no next job in q0, check q1 for a job to run
+            job_t *next_job = (job_t *)list_tail(info->q1)->data;
+            info->job1 = next_job;
+
+            if (next_job != NULL ){
+
+                schedulercancelnextcompletion(scheduler);
+                schedulerschedulnextcompletion(scheduler, currentTime + 1);
+                list_remove(info->q1, list_tail(info->q1));
+            }
+        }            
     }
     else if (job1 != NULL) // demote running job in q1 to q2
     {
         if (jobGetRemainingTime(job1) > 0)
         {
-            list_insert(info->q2, job0);
+            list_insert(info->q2, job1);
 
             job_t *next_job = (job_t *)list_tail(info->q1)->data;
-            info->job0 = next_job;
+            info->job1 = next_job;
 
             if (next_job != NULL)
             {
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+                // remove the job from q1
+                list_remove(info->q1, list_tail(info->q1));
             }
-
-            list_remove(info->q1, list_tail(info->q1));
         }
     }
     else if (job2 != NULL)

@@ -129,26 +129,31 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
     job_t *running_job = info->running_job;
     job_priority_t job_priority = info->running_job_priority;
 
-    jobSetRemainingTime(running_job, jobGetRemainingTime(running_job) - 1); // update remaining time
+    uint64_t remaining_time = jobGetRemainingTime(running_job) - 1;
+    jobSetRemainingTime(running_job, remaining_time); // update remaining time
 
-    if (jobGetRemainingTime(running_job) > 0)
+    if (remaining_time > 0)
     {
         // demote running job
-
         if (job_priority == 0) {
             list_insert(info->q1, running_job);
-        } else if (job_priority == 1) {
-            list_insert(info->q2, running_job);
         } else {
             list_insert(info->q2, running_job);
         }
-
-        schedulerMLFQRunHighestPriorityJob(info);
-    } else {
-        info->running_job = NULL;
-        return running_job;
     }
-    return NULL;
+
+    schedulerMLFQRunHighestPriorityJob(info);
+
+    if (info->running_job != NULL) {
+        uint64_t job_time = (jobGetRemainingTime(info->running_job) > 0) ? 1 : 0;
+        schedulerScheduleNextCompletion(scheduler, currentTime + job_time);
+    }
+
+    if (remaining_time <= 0) {
+        return running_job;
+    } else {
+        return NULL;
+    }
 }
 
 
@@ -185,6 +190,7 @@ void schedulerMLFQRunHighestPriorityJob(scheduler_MLFQ_t *info){
 
         info->running_job_priority = 2;
         info->running_job = job;
+    } else {
+        info->running_job = NULL;
     }
-    info->running_job = NULL;
 }

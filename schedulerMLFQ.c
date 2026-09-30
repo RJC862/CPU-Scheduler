@@ -4,15 +4,16 @@
 #include "job.h"
 #include "linked_list.h"
 
+typedef int job_priority_t;
+
 // MLFQ scheduler info
 typedef struct
 {
     list_t *q0;
     list_t *q1;
     list_t *q2;
-    job_t *job0;
-    job_t *job1;
-    job_t *job2;
+    job_t *running_job;
+    job_priority_t running_job_priority;
     scheduler_info_create_fn create;
     scheduler_info_destroy_fn destroy;
     schedule_job_fn scheduleJob;
@@ -31,9 +32,8 @@ void *schedulerMLFQCreate()
     info->q0 = list_create(NULL);
     info->q1 = list_create(NULL);
     info->q2 = list_create(NULL);
-    info->job0 = NULL;
-    info->job1 = NULL;
-    info->job2 = NULL;
+    info->running_job = NULL;
+    info->running_job_priority = 0;
     info->create = schedulerMLFQCreate;
     info->destroy = schedulerMLFQDestroy;
     info->scheduleJob = schedulerMLFQScheduleJob;
@@ -53,12 +53,12 @@ void schedulerMLFQDestroy(void *schedulerInfo)
     }
     if (info->q1 != NULL)
     {
-        list_destroy(info->q0);
+        list_destroy(info->q1);
         info->q1 = NULL;
     }
     if (info->q2 != NULL)
     {
-        list_destroy(info->q0);
+        list_destroy(info->q2);
         info->q2 = NULL;
     }
     free(info);
@@ -77,15 +77,29 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     }
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
 
-    if (info->job0 == NULL)
+    // next completion event happens at most 1 second after a job is scheduled
+    uint64_t job_time = jobGetJobTime(job);
+    if (job_time > 0)
     {
-        info->job0 = job;
-        schedulerCancelNextCompletion(scheduler); // preempt
-        schedulerScheduleNextCompletion(scheduler, currentTime + 1); // timeslice of 1
+        job_time = 1;
     }
-    else
+
+    if (info->running_job == NULL)
     {
-        list_insert(info->q0, job);
+        info->running_job = job;
+        info->running_job_priority = 0;
+
+        schedulerScheduleNextCompletion(scheduler, currentTime + job_time);
+    }
+    else if (info->running_job_priority != 0)
+    {
+
+        schedulerCancelNextCompletion(scheduler); // preempt
+
+        info->running_job = job;
+        info->running_job_priority = 0;
+
+        schedulerScheduleNextCompletion(scheduler, currentTime + job_time);
     }
 }
 
@@ -97,74 +111,89 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
-    job_t *job0 = info->job0;
-    job_t *job1 = info->job1;
-    job_t *job2 = info->job2;
 
-    // queues will always have an assigned job to run if not empty
-    if (job0 != NULL)
+    job_t *completed_job = info->running_job;
+    job_priority_t completed_job_priority = info->running_job_priority;
+
+    jobSetRemainingTime(completed_job, jobGetRemainingTime(completed_job) - 1); // update remaining time
+
+    if (jobGetRemainingTime(completed_job) > 0)
     {
-
-        // if job0 in q0 is not finished, demote it
-        if (jobGetRemainingTime(job0) > 0)
+        // demote job priority
+        if (completed_job_priority == 0)
         {
-            jobSetRemainingTime(job0, jobGetRemainingTime(job0) -1);
-            list_insert(info->q1, job0);
+            list_insert(info->q1, completed_job);
+
+            // run next highest priority job
+            list_node_t *next_job_node = list_tail(info->q0);
+            list_remove(info->q0, next_job_node);
+
+            if (next_job_node == NULL)
+            {
+                next_job_node = list_tail(info->q1);
+                list_remove(info->q1, next_job_node);
+                info->running_job_priority = 1;
+            }
+
+            if (next_job_node == NULL)
+            {
+                next_job_node = list_tail(info->q2);
+                list_remove(info->q2, next_job_node);
+                info->running_job_priority = 2;
+            }
+
+            job_t *next_job = (job_t *)next_job_node->data;
+
+            if (next_job != NULL)
+            {
+                info->running_job = next_job;
+                schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            }
         }
-
-        // get and run next job from q0
-        job_t *next_job = (job_t *)list_tail(info->q0)->data;
-        info->job0 = next_job;
-
-        if (next_job != NULL)
+        else if (completed_job_priority == 1)
         {
-            schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            // demote job priority
+            list_insert(info->q2, completed_job);
 
-            // remove the job from q0
-            list_remove(info->q0, list_tail(info->q0));
+            // run next highest priority job
+            list_node_t *next_job_node = list_tail(info->q1);
+            list_remove(info->q1, next_job_node);
+            
+            if (next_job_node == NULL) {
+                next_job_node = list_tail(info->q2);
+                list_remove(info->q2, next_job_node);
+                info->running_job_priority = 2;
+            }
+
+            job_t *next_job = (job_t *) next_job_node->data;
+
+            if (next_job != NULL) {
+                info->running_job = next_job;
+                schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            }
         } else {
 
-            // if there is no next job in q0, check q1 for a job to run
-            job_t *next_job = (job_t *)list_tail(info->q1)->data;
-            info->job1 = next_job;
+            // run next job in q2
+            list_node_t *next_job_node = list_tail(info->q2);
 
-            if (next_job != NULL ){
+            job_t * next_job = (job_t *) next_job_node->data;
 
-                schedulercancelnextcompletion(scheduler);
-                schedulerschedulnextcompletion(scheduler, currentTime + 1);
-                list_remove(info->q1, list_tail(info->q1));
-            }
-        }            
-    }
-    else if (job1 != NULL) // demote running job in q1 to q2
-    {
-        if (jobGetRemainingTime(job1) > 0)
-        {
-            list_insert(info->q2, job1);
-
-            job_t *next_job = (job_t *)list_tail(info->q1)->data;
-            info->job1 = next_job;
-
-            if (next_job != NULL)
-            {
+            if (next_job == NULL) {
+                // run last job until it's complete
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
-                // remove the job from q1
-                list_remove(info->q1, list_tail(info->q1));
-            }
-        }
-    }
-    else if (job2 != NULL)
-    {
+            } else {
 
-        if (jobGetRemainingTime(job2) > 0)
-        {
-            job_t *next_job = (job_t *)list_tail(info->q2)->data;
-            info->job2 = next_job;
-            if (next_job != NULL)
-            {
+                // round robin
+                list_remove(info->q2, next_job_node);
+                list_insert(info->q2, info->running_job);
+                info->running_job = next_job;
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
             }
         }
+    } else {
+        info->running_job = NULL;
+        return completed_job;
     }
+
     return NULL;
 }

@@ -110,6 +110,10 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 // Returns the job that is being completed
 job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
+
+    if (schedulerInfo == NULL) {
+        return NULL;
+    }
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
 
     job_t *completed_job = info->running_job;
@@ -126,19 +130,19 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
 
             // run next highest priority job
             list_node_t *next_job_node = list_tail(info->q0);
-            list_remove(info->q0, next_job_node);
+
 
             if (next_job_node == NULL)
             {
                 next_job_node = list_tail(info->q1);
-                list_remove(info->q1, next_job_node);
+
                 info->running_job_priority = 1;
             }
 
             if (next_job_node == NULL)
             {
                 next_job_node = list_tail(info->q2);
-                list_remove(info->q2, next_job_node);
+
                 info->running_job_priority = 2;
             }
 
@@ -149,6 +153,14 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
                 info->running_job = next_job;
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
             }
+
+            if (info->running_job_priority == 0) {
+                list_remove(info->q0, next_job_node);
+            } else if (info->running_job_priority == 1) {
+                list_remove(info->q1, next_job_node);
+            } else {
+                list_remove(info->q2, next_job_node);
+            }
         }
         else if (completed_job_priority == 1)
         {
@@ -157,35 +169,41 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
 
             // run next highest priority job
             list_node_t *next_job_node = list_tail(info->q1);
-            list_remove(info->q1, next_job_node);
             
             if (next_job_node == NULL) {
+
                 next_job_node = list_tail(info->q2);
-                list_remove(info->q2, next_job_node);
+
                 info->running_job_priority = 2;
             }
 
             job_t *next_job = (job_t *) next_job_node->data;
 
             if (next_job != NULL) {
+
                 info->running_job = next_job;
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+            }
+            
+            if (info->running_job_priority == 1) {
+                list_remove(info->q1, next_job_node);
+            } else {
+                list_remove(info->q2, next_job_node);
             }
         } else {
 
             // run next job in q2
             list_node_t *next_job_node = list_tail(info->q2);
-
-            job_t * next_job = (job_t *) next_job_node->data;
-
-            if (next_job == NULL) {
+            list_node_t *next_job_node_cpy = next_job_node;
+            if (next_job_node == NULL) {
                 // run last job until it's complete
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
+                
             } else {
-
+                job_t * next_job = (job_t *) next_job_node->data;
                 // round robin
                 list_remove(info->q2, next_job_node);
-                list_insert(info->q2, info->running_job);
+                list_insert(info->q2, next_job_node_cpy->data);
                 info->running_job = next_job;
                 schedulerScheduleNextCompletion(scheduler, currentTime + 1);
             }

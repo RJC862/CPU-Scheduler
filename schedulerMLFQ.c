@@ -80,11 +80,7 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
 
     // next completion event happens at most 1 second after a job is scheduled
-    uint64_t job_time = jobGetJobTime(job);
-    if (job_time > 0)
-    {
-        job_time = 1;
-    }
+    uint64_t job_time = (jobGetRemainingTime(job) > 0) ? 1 : 0;
 
     if (info->running_job == NULL)
     {
@@ -98,17 +94,22 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 
         schedulerCancelNextCompletion(scheduler); // preempt
 
-        if (info->running_job_priority == 1) {
-            list_insert(info->q1, info->running_job);
-        } else {
-            list_insert(info->q2, info->running_job);
+        if (info->running_job_priority == 1)
+        {
+            list_tail_insert(info->q1, info->running_job);
         }
-        
+        else
+        {
+            list_tail_insert(info->q2, info->running_job);
+        }
+
         info->running_job = job;
         info->running_job_priority = 0;
 
         schedulerScheduleNextCompletion(scheduler, currentTime + job_time);
-    } else {
+    }
+    else
+    {
         list_insert(info->q0, job);
     }
 }
@@ -121,7 +122,8 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
 
-    if (schedulerInfo == NULL) {
+    if (schedulerInfo == NULL)
+    {
         return NULL;
     }
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
@@ -129,37 +131,53 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
     job_t *running_job = info->running_job;
     job_priority_t job_priority = info->running_job_priority;
 
-    uint64_t remaining_time = jobGetRemainingTime(running_job) - 1;
-    jobSetRemainingTime(running_job, remaining_time); // update remaining time
+    if (running_job == NULL)
+    {
+        return NULL;
+    }
+    uint64_t remaining_time = jobGetRemainingTime(running_job);
+    if (remaining_time > 0)
+    {
+        remaining_time -= 1;
+        jobSetRemainingTime(running_job, remaining_time); // update remaining time
+    }
 
     if (remaining_time > 0)
     {
         // demote running job
-        if (job_priority == 0) {
+        if (job_priority == 0)
+        {
             list_insert(info->q1, running_job);
-        } else {
+        }
+        else
+        {
             list_insert(info->q2, running_job);
         }
     }
 
     schedulerMLFQRunHighestPriorityJob(info);
 
-    if (info->running_job != NULL) {
+    if (info->running_job != NULL)
+    {
         uint64_t job_time = (jobGetRemainingTime(info->running_job) > 0) ? 1 : 0;
         schedulerScheduleNextCompletion(scheduler, currentTime + job_time);
     }
 
-    if (remaining_time <= 0) {
+    if (remaining_time == 0)
+    {
         return running_job;
-    } else {
+    }
+    else
+    {
         return NULL;
     }
 }
 
+void schedulerMLFQRunHighestPriorityJob(scheduler_MLFQ_t *info)
+{
 
-void schedulerMLFQRunHighestPriorityJob(scheduler_MLFQ_t *info){
-    
-    if (info == NULL) {
+    if (info == NULL)
+    {
         return;
     }
 
@@ -169,28 +187,35 @@ void schedulerMLFQRunHighestPriorityJob(scheduler_MLFQ_t *info){
 
     list_node_t *q2_tail = list_tail(info->q2);
 
-    if (q0_tail != NULL) {
+    if (q0_tail != NULL)
+    {
 
         job_t *job = q0_tail->data;
         list_remove(info->q0, q0_tail);
 
         info->running_job_priority = 0;
         info->running_job = job;
-    } else if (q1_tail != NULL) {
+    }
+    else if (q1_tail != NULL)
+    {
 
         job_t *job = q1_tail->data;
         list_remove(info->q1, q1_tail);
 
         info->running_job_priority = 1;
         info->running_job = job;
-    } else if (q2_tail != NULL){
+    }
+    else if (q2_tail != NULL)
+    {
 
         job_t *job = q2_tail->data;
         list_remove(info->q2, q2_tail);
 
         info->running_job_priority = 2;
         info->running_job = job;
-    } else {
+    }
+    else
+    {
         info->running_job = NULL;
     }
 }

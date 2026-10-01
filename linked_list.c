@@ -245,3 +245,37 @@ void list_remove(list_t *list, list_node_t *node)
 
     free(node);
 }
+
+list_node_t *list_tail_insert(list_t *list, void *data)
+{
+    if (list == NULL)
+    {
+        return NULL;
+    }
+
+    list_node_t *new_node = (list_node_t *)malloc(sizeof(list_node_t));
+    if (new_node == NULL)
+    {
+        return NULL;
+    }
+
+    new_node->data = data;
+    new_node->next = NULL;
+    new_node->prev = NULL;
+
+    list_node_t *tail = list_tail(list);
+
+    if (tail == NULL)
+    {
+        list->head = new_node;
+        list->tail = new_node;
+    }
+    else
+    {
+        tail->next = new_node;
+        new_node->prev = tail;
+        list->tail = new_node;
+    }
+
+    return new_node;
+}

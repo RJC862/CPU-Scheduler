@@ -9,9 +9,7 @@ typedef int job_priority_t;
 // MLFQ scheduler info
 typedef struct
 {
-    list_t *q0;
-    list_t *q1;
-    list_t *q2;
+    list_t *queues[4];
     job_t *running_job;
     job_priority_t running_job_priority;
     scheduler_info_create_fn create;
@@ -31,9 +29,10 @@ void *schedulerMLFQCreate()
         return NULL;
     }
 
-    info->q0 = list_create(NULL);
-    info->q1 = list_create(NULL);
-    info->q2 = list_create(NULL);
+    for (int i = 0; i < 4; i++)
+    {
+        info->queues[i] = list_create(NULL);
+    }
     info->running_job = NULL;
     info->running_job_priority = 0;
     info->create = schedulerMLFQCreate;
@@ -48,20 +47,12 @@ void *schedulerMLFQCreate()
 void schedulerMLFQDestroy(void *schedulerInfo)
 {
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
-    if (info->q0 != NULL)
+    for (int i = 0; i < 4; i++)
     {
-        list_destroy(info->q0);
-        info->q0 = NULL;
-    }
-    if (info->q1 != NULL)
-    {
-        list_destroy(info->q1);
-        info->q1 = NULL;
-    }
-    if (info->q2 != NULL)
-    {
-        list_destroy(info->q2);
-        info->q2 = NULL;
+        if (info->queues[i] != NULL)
+        {
+            free(info->queues[i]);
+        }
     }
     free(info);
 }
@@ -79,7 +70,6 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     }
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
 
-    // next completion event happens at most 1 second after a job is scheduled
     uint64_t job_time = (jobGetRemainingTime(job) > 0) ? 1 : 0;
 
     if (info->running_job == NULL)
@@ -91,17 +81,9 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     }
     else if (info->running_job_priority != 0)
     {
-
         schedulerCancelNextCompletion(scheduler); // preempt
 
-        if (info->running_job_priority == 1)
-        {
-            list_tail_insert(info->q1, info->running_job);
-        }
-        else
-        {
-            list_tail_insert(info->q2, info->running_job);
-        }
+        list_tail_insert(info->queues[info->running_job_priority], info->running_job);
 
         info->running_job = job;
         info->running_job_priority = 0;
@@ -110,7 +92,7 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
     }
     else
     {
-        list_insert(info->q0, job);
+        list_insert(info->queues[0], job);
     }
 }
 
@@ -122,37 +104,33 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
 job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uint64_t currentTime)
 {
 
-    if (schedulerInfo == NULL)
-    {
-        return NULL;
-    }
     scheduler_MLFQ_t *info = (scheduler_MLFQ_t *)schedulerInfo;
 
     job_t *running_job = info->running_job;
-    job_priority_t job_priority = info->running_job_priority;
+    int job_priority = info->running_job_priority;
 
     if (running_job == NULL)
     {
         return NULL;
     }
+
     uint64_t remaining_time = jobGetRemainingTime(running_job);
+
     if (remaining_time > 0)
     {
         remaining_time -= 1;
-        jobSetRemainingTime(running_job, remaining_time); // update remaining time
+        jobSetRemainingTime(running_job, remaining_time);
     }
 
     if (remaining_time > 0)
     {
-        // demote running job
-        if (job_priority == 0)
+        // demote one level; the bottom level stays where it is
+        int next = job_priority;
+        if (next < 4 - 1)
         {
-            list_insert(info->q1, running_job);
+            next++;
         }
-        else
-        {
-            list_insert(info->q2, running_job);
-        }
+        list_insert(info->queues[next], running_job);
     }
 
     schedulerMLFQRunHighestPriorityJob(info);
@@ -163,14 +141,7 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
         schedulerScheduleNextCompletion(scheduler, currentTime + job_time);
     }
 
-    if (remaining_time == 0)
-    {
-        return running_job;
-    }
-    else
-    {
-        return NULL;
-    }
+    return (remaining_time == 0) ? running_job : NULL;
 }
 
 void schedulerMLFQRunHighestPriorityJob(scheduler_MLFQ_t *info)
@@ -181,41 +152,17 @@ void schedulerMLFQRunHighestPriorityJob(scheduler_MLFQ_t *info)
         return;
     }
 
-    list_node_t *q0_tail = list_tail(info->q0);
-
-    list_node_t *q1_tail = list_tail(info->q1);
-
-    list_node_t *q2_tail = list_tail(info->q2);
-
-    if (q0_tail != NULL)
+    for (int i = 0; i < 4; i++)
     {
-
-        job_t *job = q0_tail->data;
-        list_remove(info->q0, q0_tail);
-
-        info->running_job_priority = 0;
-        info->running_job = job;
+        list_node_t *tail = list_tail(info->queues[i]);
+        if (tail != NULL)
+        {
+            job_t *job = tail->data;
+            list_remove(info->queues[i], tail);
+            info->running_job = job;
+            return;
+        }
     }
-    else if (q1_tail != NULL)
-    {
 
-        job_t *job = q1_tail->data;
-        list_remove(info->q1, q1_tail);
-
-        info->running_job_priority = 1;
-        info->running_job = job;
-    }
-    else if (q2_tail != NULL)
-    {
-
-        job_t *job = q2_tail->data;
-        list_remove(info->q2, q2_tail);
-
-        info->running_job_priority = 2;
-        info->running_job = job;
-    }
-    else
-    {
-        info->running_job = NULL;
-    }
+    info->running_job = NULL;
 }

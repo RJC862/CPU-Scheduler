@@ -55,6 +55,7 @@ void schedulerDestroy(scheduler_t* scheduler)
 void schedulerScheduleJob(scheduler_t* scheduler, job_t* job)
 {
     uint64_t currentTime = simulatorSimTime(scheduler->sim);
+
     scheduler->scheduleJob(scheduler->schedulerInfo, scheduler, job, currentTime);
 }
 
@@ -65,6 +66,7 @@ void schedulerCompleteJob(void* s)
     scheduler->completionEvent = NULL;
     uint64_t currentTime = simulatorSimTime(scheduler->sim);
     job_t* job = scheduler->completeJob(scheduler->schedulerInfo, scheduler, currentTime);
+    
     if (job) {
         scheduler->completionCallback(scheduler->completionCallbackData, job);
     }

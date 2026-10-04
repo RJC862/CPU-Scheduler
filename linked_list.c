@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include "linked_list.h"
+#include <stdio.h>
+#include "job.h"
 
 // Creates and returns a new list
 // If compare is NULL, list_insert just inserts at the head
@@ -246,6 +248,7 @@ void list_remove(list_t *list, list_node_t *node)
     free(node);
 }
 
+// inserts a node at the tail
 list_node_t *list_tail_insert(list_t *list, void *data)
 {
     if (list == NULL)
@@ -268,14 +271,12 @@ list_node_t *list_tail_insert(list_t *list, void *data)
     if (tail == NULL)
     {
         list->head = new_node;
-        list->tail = new_node;
     }
     else
     {
         tail->next = new_node;
         new_node->prev = tail;
-        list->tail = new_node;
     }
-
+    list->tail = new_node;
     return new_node;
 }

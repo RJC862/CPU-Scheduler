@@ -88,6 +88,7 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
         // run new job immediately
         info->running_job = job;
         info->running_job_priority = 0;
+        info->running_job_start_time = currentTime;
         uint64_t run_time = 0;
 
         if (jobGetRemainingTime(job) > 0){
@@ -97,28 +98,56 @@ void schedulerMLFQScheduleJob(void *schedulerInfo, scheduler_t *scheduler, job_t
         //printf("schedule job ID: %ld Remaining time: %ld\n", jobGetId(job), jobGetRemainingTime(job));
 
         schedulerScheduleNextCompletion(scheduler, currentTime + run_time);
+        return;
     }
-    else if (info->running_job_priority != 0)
+
+    if (info->running_job_priority > 0)
     {
         // preempt the current running job
 
-        printf("preempted job ID: %ld Remaining time: %ld Current Time: %ld\n", jobGetId(info->running_job), jobGetRemainingTime(info->running_job), currentTime);
-
         schedulerCancelNextCompletion(scheduler); // preempt
 
-        if (info->running_job_priority == 1)
-        {
-            list_insert(info->q1, info->running_job);
+        //update the remaining time
+        uint64_t running_time = currentTime - info->running_job_start_time;
+        uint64_t remaining_time = jobGetRemainingTime(info->running_job);
+
+        if (running_time < remaining_time) {
+            remaining_time -= running_time;
+        } else {
+            remaining_time = 0;
         }
-        else
+        jobSetRemainingTime(info->running_job, remaining_time);
+
+        // Put the preempted job back into its queue
+        if (remaining_time > 0)
         {
-            list_insert(info->q2, info->running_job);
+            if (running_time >= 1)
+            {
+                // demote
+                if (info->running_job_priority == 1) {
+                    list_insert(info->q2, info->running_job);
+                } else {
+                    list_insert(info->q2, info->running_job);
+                }
+            }
+            else
+            {
+                // keep job in its priority level
+                if (info->running_job_priority == 1) {
+                    list_insert(info->q1, info->running_job);
+                } else {
+                    list_insert(info->q2, info->running_job);
+                }
+            }
         }
+
+        printf("preempted job ID: %ld Remaining time: %ld Current Time: %ld\n", jobGetId(info->running_job), jobGetRemainingTime(info->running_job), currentTime);
 
         // run new job with priority 0
 
         info->running_job = job;
         info->running_job_priority = 0;
+        info->running_job_start_time = currentTime;
 
         printf("Newly running job after preemption: %ld\n", jobGetId(info->running_job));
 
@@ -179,12 +208,10 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
         if (job_priority == 0)
         {
             list_insert(info->q1, running_job);
-            info->running_job_priority = 1;
         }
         else
         {
             list_insert(info->q2, running_job);
-            info->running_job_priority = 2;
         }
     }
     printf("job ID: %ld Remaining Time: %ld Priority: %d current time: %ld\n", jobGetId(running_job), jobGetRemainingTime(running_job), info->running_job_priority, currentTime);
@@ -228,8 +255,11 @@ job_t *schedulerMLFQCompleteJob(void *schedulerInfo, scheduler_t *scheduler, uin
         list_remove(info->q2, q2_tail);
 
         info->running_job_priority = 2;
+    } else {
+        info->running_job_priority = 0;
     }
     info->running_job = next_job;
+    info->running_job_start_time = currentTime;
 
 
 

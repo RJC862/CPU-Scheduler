@@ -1,3 +1,9 @@
+# Overview
+A CPU job scheduler I wrote for my Operating Systems course.
+Implements FCFS, LCFS, SJF, and MLFQ with round robin.
+
+Source code in linked_list.c, schedulerFCFS.c,schedulerLCFS.c, schedulerSJF.c, schedulerMLFQ.c
+
 # Project 2: Simulatorlab Scheduling Policies
 
 ## Release Date: 09/15/2026, 6 PM Due Date: 10/03/2026, 6 PM
